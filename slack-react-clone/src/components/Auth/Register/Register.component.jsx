@@ -1,5 +1,7 @@
-import React,{useState} from 'react';
-import {Grid , Form,Segment,Header,Icon, Button,Message} from 'semantic-ui-react'
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Grid, Form, Segment, Header, Icon, Button, Message } from 'semantic-ui-react'
+import firebase from '../../../server/firebase';
 import "./Register.css"
 
 const Register = () => {
@@ -12,8 +14,13 @@ const Register = () => {
 
     }
     let errors = [];
+
+    let userCollectionRef = firebase.database().ref('users');
+
     const [userState, setuserState] = useState(user);
     const [errorState, seterrorState] = useState(errors);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
 
     const handleInput = (event) => {
         let target = event.target;
@@ -31,7 +38,7 @@ const Register = () => {
         }
         else if (!checkPassword())
         {
-            seterrorState((error) => error.concat({ message: "Incorrect Password" }));
+            
             return false;
         }
         return true;
@@ -44,19 +51,71 @@ const Register = () => {
     }
     const checkPassword = () => {
         if (userState.password.length < 8) {
+            seterrorState((error) => error.concat({ message: "Password length should be minimum 8 !!" }));
             return false;
         }
         else if (userState.password !== userState.confirmpassword) {
+            seterrorState((error) => error.concat({ message: "Password does not match !!" }));
             return false;
         }
         return true;
     }
     const onSubmit = (event) => {
         seterrorState(() => []);
+        setIsSuccess(false);
         if (checkForm()) {
+            setIsLoading(true);
+            firebase.auth().createUserWithEmailAndPassword(userState.email, userState.password)
+                .then(createdUser => {
+                    setIsLoading(false);
+                    updateuserDetails(createdUser);
+                })
+                .catch(serverError => {
+                    setIsLoading(false);
+
+                    seterrorState((error) => error.concat(serverError));
+                   
+            })
             
         }
     }
+    const updateuserDetails = (createduser) => {
+        if (createduser) {
+            setIsLoading(true);
+            createduser.user
+                .updateProfile({
+                    displayName: userState.userName,
+                    photoURL: "http://gravatar.com/avatar/"+createduser.user.uid+"?d=identicon"
+                })
+                .then(() => {
+                    setIsLoading(false);
+                    saveUserInDB(createduser);
+                })
+                .catch((serverError) => {
+                    setIsLoading(false);
+                    seterrorState((error) => error.concat(serverError));
+            })
+        }
+    }
+
+    const saveUserInDB = (createdUser) => {
+        setIsLoading(true);
+        userCollectionRef.child(createdUser.user.uid).set({
+            displayName: createdUser.user.displayName,
+            photoURL:createdUser.user.photoURL
+        })
+            .then(() => {
+                setIsLoading(false);
+                setIsSuccess(true);
+            })
+            .catch((serverError) => {
+                setIsLoading(false);
+                seterrorState((error) => error.concat(serverError));
+        })
+    }
+
+
+
     const formaterrors = () => {
         return errorState.map((error, index) => <p key={index}>{error.message}</p>)
     }
@@ -107,13 +166,22 @@ const Register = () => {
                         />
                         
                     </Segment>
-                    <Button>Submit</Button>
+                    <Button disabled={isLoading} loading={isLoading}>Submit</Button>
                 </Form>
                 {errorState.length > 0 && <Message error>
                     <h3>Errors</h3>
                     {formaterrors()}
                 </Message>
                 }
+
+                {isSuccess && <Message success>
+                    <h3>Successfully Registered</h3>
+                   
+                </Message>
+                }
+                <Message>
+                    Already an User ?<Link to="/login" > Login </Link>
+                </Message>
             </Grid.Column>
         </Grid>
     )
