@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Grid, Form, Segment, Header, Icon, Button, Message } from 'semantic-ui-react'
 import firebase from '../../../server/firebase';
-import "./Register.css"
+import "../Auth.css"
 
 const Register = () => {
     let user = {
