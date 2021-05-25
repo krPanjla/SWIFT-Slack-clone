@@ -1,10 +1,12 @@
 import React from 'react'
+
+import {SideBar} from "./components/Auth/SideBar/SideBar.component"
 import './App.css';
 
 function App() {
   return (
     <div >
-     App component
+    <SideBar />
     </div>
   );
 }
